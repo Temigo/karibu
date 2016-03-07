@@ -8,6 +8,11 @@
 #include <vector>
 #include "hand.h"
 
+#include <stdlib.h>
+// Using Linux
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+
 // OpenCV 2.4.9
 using namespace std;
 using namespace cv;
@@ -24,8 +29,17 @@ void Hand::setSum() {
     history++;
     //cout << contourLength << endl;
     //cout << history << " " << sum/history << " " << mean << endl;
-    if (abs(sum/history - mean) > threshold && history > 10) {
-        cout << "Change " << history << endl;
+    if (abs(sum/history - mean) > threshold && history > 15) {
+        //cout << "Change " << history << endl;
+        system("xdotool key alt+Tab");
+        if (change) {
+            cout << "Hand open" << endl;
+
+        }
+        else {
+            cout << "Closed" << endl;
+        }
+        change = !change;
         reset();
         //cout << "   " << history << " " << sum/history << " " << mean << endl;
     }

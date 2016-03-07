@@ -20,11 +20,10 @@ public:
     double mean;
     double threshold;
     int history;
-
     bool change;
 
     Hand() {
-        change = false;
+        change = true;
         threshold = 100;
         history = 0;
         mean = 0;
