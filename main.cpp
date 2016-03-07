@@ -168,8 +168,8 @@ int main( int argc, const char* argv[] ) {
         }*/
 
         //imshow("Original", frame);
-        imshow("Blur", blurred_frame);
-        moveWindow("Blur", 700, 0);
+        //imshow("Blur", blurred_frame);
+        //moveWindow("Blur", 700, 0);
         imshow("Karibu", dst2);
 
         waitKey(30);
