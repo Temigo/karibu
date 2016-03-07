@@ -17,5 +17,5 @@ endif(OpenCV_FOUND)
 
 PROJECT(karibu)
 
-ADD_EXECUTABLE(karibu main.cpp)
+ADD_EXECUTABLE(karibu main.cpp hand.cpp)
 TARGET_LINK_LIBRARIES(karibu ${OpenCV_LIBS})

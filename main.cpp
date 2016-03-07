@@ -6,20 +6,24 @@
 #include <opencv2/video/background_segm.hpp>
 #include <stdexcept>
 #include <vector>
+#include "hand.h"
+
 // OpenCV 2.4.9
 using namespace std;
 using namespace cv;
 
-Mat detect_biggest_blob(Mat draw) {
+
+
+Mat detect_biggest_blob(Mat draw, Hand* hand) {
     vector< vector<Point> > outputs;
     vector<Vec4i> hierarchy;
     Mat dst = Mat::zeros(draw.size(), CV_8UC3);
 
     findContours(draw, outputs, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
     int largestComp = -1;
-    double maxArea = 60;
+    double maxArea = 100;
 
-    for(int idx = 0 ; idx < outputs.size() ; idx++) {
+    for(unsigned int idx = 0 ; idx < outputs.size() ; idx++) {
         double area = fabs(contourArea(outputs[idx], false));
         if( area > maxArea ) {
             maxArea = area;
@@ -32,13 +36,14 @@ Mat detect_biggest_blob(Mat draw) {
     Scalar color( 0, 0, 255 );
 
     if (outputs[largestComp].size() >= 5) {
-        RotatedRect box = fitEllipse(outputs[largestComp]);
+        vector<Point> contour = outputs[largestComp];
+        RotatedRect box = fitEllipse(contour);
 
         if (box.size.width > 10) {
             vector<Point> hull;
             vector<int> hullI;
-            convexHull(outputs[largestComp], hull);
-            convexHull(outputs[largestComp], hullI);
+            convexHull(contour, hull);
+            convexHull(contour, hullI);
 
             vector< vector<Point> > a;
             a.push_back(hull);
@@ -47,21 +52,32 @@ Mat detect_biggest_blob(Mat draw) {
             //drawContours(dst, outputs, largestComp, color);
             drawContours(dst, a, 0, color);
 
-            if (hull.size() > 3 && outputs[largestComp].size() > 3) {
+            // Find and draw convexity defects
+            if (hull.size() > 3 && contour.size() > 3) {
                 vector<Vec4i> defects;
-                convexityDefects(outputs[largestComp], hullI, defects);
+                convexityDefects(contour, hullI, defects);
 
-                for (int i = 0; i < defects.size() ; i++) {
+                for (unsigned int i = 0; i < defects.size() ; i++) {
                     const Vec4i& v = defects[i];
                     float depth = v[3] / 256;
                     if (depth > 20) {
-                        circle(dst, outputs[largestComp][v[2]], 10, Scalar(0, 255, 0));
+                        circle(dst, contour[v[2]], 10, Scalar(0, 255, 0));
                     }
                 }
             }
+
+            // Approx Poly
+            vector<Point> approx;
+            approxPolyDP(contour, approx, 30, true);
+            a.push_back(approx);
+            drawContours(dst, a, 1, Scalar(0,255,0));
+
+            // Save in hand
+            hand->contour = contour;
+            hand->contourLength = arcLength(contour, true);
+            hand->setSum();
         }
     }
-
     return dst;
 }
 
@@ -122,6 +138,7 @@ int main( int argc, const char* argv[] ) {
 
     Ptr<BackgroundSubtractor> pMOG2;
     pMOG2 = createBackgroundSubtractorMOG2(500, 16, false);
+    Hand hand;
 
     for (;;) {
         Mat frame;
@@ -135,10 +152,12 @@ int main( int argc, const char* argv[] ) {
         //GaussianBlur(frame, frame, Size(5, 5), 0, 0);
         //medianBlur(frame, frame, 5);
         bilateralFilter(frame, blurred_frame, 5, 5, 5);
+        erode(blurred_frame, blurred_frame, NULL);
+        dilate(blurred_frame, blurred_frame, NULL);
 
         // Proceed on frame
         Mat dst = extract_background(blurred_frame, pMOG2);
-        Mat dst2 = detect_biggest_blob(dst);
+        Mat dst2 = detect_biggest_blob(dst, &hand);
 
         /*vector<Rect> objects;
         CascadeClassifier c = CascadeClassifier("include/palm.xml");
