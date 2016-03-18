@@ -13,6 +13,7 @@
 using namespace std;
 using namespace cv;
 
+bool ENABLE_ALT_TAB = false;
 
 void Hand::reset() {
     history = 1;
@@ -28,7 +29,7 @@ void Hand::setSum() {
     //cout << history << " " << sum/history << " " << mean << endl;
     if (abs(sum/history - mean) > threshold && history > 15) {
         //cout << "Change " << history << endl;
-        do_alt_tab();
+        if (ENABLE_ALT_TAB) do_alt_tab();
         if (change) {
             cout << "Hand open" << endl;
 

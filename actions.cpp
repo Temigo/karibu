@@ -22,9 +22,18 @@ void do_alt_tab_press() {
 void do_mousemove(float x, float y, ScreenSize* screen) {
     int x_coord = int((1-x) * screen->width);
     int y_coord = int(y * screen->height);
+
+    //cout << x_coord << " " << y_coord << endl;
+
     ostringstream oss;
-    oss << "xdotool mousemove " << x_coord << " " << y_coord;
+    oss << "xdotool mousemove --sync " << x_coord << " " << y_coord;
 
     string s = oss.str();
     system(s.c_str());
+}
+
+void detect_finger_move(float x, float y, ScreenSize* screen) {
+    int x_coord = int((1-x) * screen->width);
+    int y_coord = int(y * screen->height);
+      
 }

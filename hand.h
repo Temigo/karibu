@@ -11,6 +11,8 @@
 using namespace std;
 using namespace cv;
 
+extern bool ENABLE_ALT_TAB;
+
 class Hand {
 public:
     vector<Point> contour;

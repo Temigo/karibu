@@ -23,3 +23,4 @@ struct ScreenSize {
 void do_alt_tab();
 void do_alt_tab_press();
 void do_mousemove(float x, float y, ScreenSize* screen);
+void detect_finger_move(float x, float y, ScreenSize* screen);

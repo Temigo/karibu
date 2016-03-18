@@ -9,7 +9,6 @@
 #include "hand.h"
 #include "actions.h"
 
-// OpenCV 2.4.9
 using namespace std;
 using namespace cv;
 
@@ -22,7 +21,7 @@ Mat detect_biggest_blob(Mat draw, Hand* hand) {
 
     findContours(draw, outputs, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
     int largestComp = -1;
-    double maxArea = 100;
+    double maxArea = 200;
 
     for(unsigned int idx = 0 ; idx < outputs.size() ; idx++) {
         double area = fabs(contourArea(outputs[idx], false));
@@ -82,17 +81,29 @@ Mat detect_biggest_blob(Mat draw, Hand* hand) {
     return dst;
 }
 
-void detect_finger_move(vector<Point> contour, Size size, ScreenSize* screen) {
+void detect_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
     Rect box = boundingRect(contour);
-
     // Move mouse according to hand move
     Point max_point;
-    max_point.y = box.tl().y;
     max_point.x = box.tl().x + box.width/2;
-    do_mousemove((float) max_point.x / (float) size.width,
+    max_point.y = box.tl().y;
+
+    // Kalman Filter
+    Mat prediction = KF->predict();
+    measurement.at<float>(0) = max_point.x;
+    measurement.at<float>(1) = max_point.y;
+    Mat estimated = KF->correct(measurement);
+    //cout << "estimate " << estimated.at<float>(0) << " " << estimated.at<float>(1) << endl;
+    //cout << "measure " << measurement.at<float>(0) << " " << measurement.at<float>(1) << endl;
+    /*do_mousemove((float) max_point.x / (float) size.width,
                 (float) max_point.y/(float) size.height,
+                screen);*/
+    do_mousemove(max((float) 0., (float) estimated.at<float>(0) / (float) size.width),
+                max((float) 0., (float) estimated.at<float>(1) / (float) size.height),
                 screen);
-    //cout << max_point.x << endl;
+
+    circle(frame, Point(estimated.at<float>(0), estimated.at<float>(1)), 10, Scalar(255, 255, 0));
+    //do_mousemove(estimated.at<float>(0), estimated.at<float>(1), screen);
 }
 
 Mat smooth_frame(Mat frame) {
@@ -130,6 +141,24 @@ int main( int argc, const char* argv[] ) {
     Hand hand;
     ScreenSize screen;
 
+    // Kalman filter
+    KalmanFilter KF(4, 2, 0);
+    Mat state(4, 2, CV_32F);
+    Mat processNoise(4, 2, CV_32F);
+    Mat_<float> measurement(2, 1);
+    measurement.setTo(Scalar(0));
+    KF.transitionMatrix = (Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
+
+    KF.statePre.at<float>(0) = 0; // First x
+    KF.statePre.at<float>(1) = 0; // First y
+    KF.statePre.at<float>(2) = 0;
+    KF.statePre.at<float>(3) = 0;
+
+    setIdentity(KF.measurementMatrix);
+    setIdentity(KF.processNoiseCov, Scalar::all(1e-5));
+    setIdentity(KF.measurementNoiseCov, Scalar::all(1e-2));
+    setIdentity(KF.errorCovPost, Scalar::all(1));
+
     for (;;) {
         Mat frame;
         cap >> frame;
@@ -142,7 +171,7 @@ int main( int argc, const char* argv[] ) {
         // Proceed on frame - hand contour is stored in hand->contour
         Mat dst = extract_background(blurred_frame, pMOG2);
         Mat dst2 = detect_biggest_blob(dst, &hand);
-        detect_finger_move(hand.contour, frame.size(), &screen);
+        detect_finger_move(dst2, hand.contour, frame.size(), &screen, &KF, measurement);
 
         /*vector<Rect> objects;
         CascadeClassifier c = CascadeClassifier("include/palm.xml");
