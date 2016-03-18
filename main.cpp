@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <vector>
 #include "hand.h"
+#include "actions.h"
 
 // OpenCV 2.4.9
 using namespace std;
@@ -67,10 +68,10 @@ Mat detect_biggest_blob(Mat draw, Hand* hand) {
             }
 
             // Approx Poly
-            vector<Point> approx;
+            /*vector<Point> approx;
             approxPolyDP(contour, approx, 30, true);
             a.push_back(approx);
-            drawContours(dst, a, 1, Scalar(0,255,0));
+            drawContours(dst, a, 1, Scalar(0,255,0));*/
 
             // Save in hand
             hand->contour = contour;
@@ -81,39 +82,28 @@ Mat detect_biggest_blob(Mat draw, Hand* hand) {
     return dst;
 }
 
-Mat detect_blobs(Mat draw) {
-    vector< vector<Point> > outputs;
-    vector<Vec4i> hierarchy;
+void detect_finger_move(vector<Point> contour, Size size, ScreenSize* screen) {
+    Rect box = boundingRect(contour);
 
-    findContours(draw, outputs, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
-    list<int> largestComp;
-    double maxArea = 60;
-    for(int idx = 0 ; idx >= 0; idx = hierarchy[idx][0] ) {
-        const vector<Point>& c = outputs[idx];
-        //cout << c << endl;
+    // Move mouse according to hand move
+    Point max_point;
+    max_point.y = box.tl().y;
+    max_point.x = box.tl().x + box.width/2;
+    do_mousemove((float) max_point.x / (float) size.width,
+                (float) max_point.y/(float) size.height,
+                screen);
+    //cout << max_point.x << endl;
+}
 
-        double area = fabs(contourArea(Mat(c)));
-        if( area > maxArea ) {
-            //maxArea = area;
-            largestComp.push_back(idx);
-        }
-    }
-
-    Mat dst = Mat::zeros(draw.size(), CV_8UC3);
-    Scalar color( 0, 0, 255 );
-
-    list<int>::iterator i;
-    for (i=largestComp.begin(); i != largestComp.end(); i++) {
-        if (outputs[*i].size() >= 5) {
-            RotatedRect box = fitEllipse(outputs[*i]);
-            if (box.size.width > 10) {
-                ellipse(dst, box, Scalar(0,255,0), 1, LINE_AA);
-                drawContours(dst, outputs, *i, color, FILLED, LINE_8, hierarchy);
-            }
-        }
-    }
-
-    return dst;
+Mat smooth_frame(Mat frame) {
+    Mat blurred_frame;
+    //blur(frame, frame, Size(25, 25), Point(-1, -1));
+    //GaussianBlur(frame, frame, Size(5, 5), 0, 0);
+    //medianBlur(frame, frame, 5);
+    bilateralFilter(frame, blurred_frame, 5, 5, 5);
+    erode(blurred_frame, blurred_frame, NULL);
+    dilate(blurred_frame, blurred_frame, NULL);
+    return blurred_frame;
 }
 
 Mat extract_background(Mat frame, Ptr<BackgroundSubtractor> pMOG2) {
@@ -135,10 +125,10 @@ int main( int argc, const char* argv[] ) {
     namedWindow("Karibu", CV_WINDOW_AUTOSIZE);
 
     // Setup
-
     Ptr<BackgroundSubtractor> pMOG2;
     pMOG2 = createBackgroundSubtractorMOG2(500, 16, false);
     Hand hand;
+    ScreenSize screen;
 
     for (;;) {
         Mat frame;
@@ -147,17 +137,12 @@ int main( int argc, const char* argv[] ) {
             break;
 
         // Smoothing frame
-        Mat blurred_frame;
-        //blur(frame, frame, Size(25, 25), Point(-1, -1));
-        //GaussianBlur(frame, frame, Size(5, 5), 0, 0);
-        //medianBlur(frame, frame, 5);
-        bilateralFilter(frame, blurred_frame, 5, 5, 5);
-        erode(blurred_frame, blurred_frame, NULL);
-        dilate(blurred_frame, blurred_frame, NULL);
+        Mat blurred_frame = smooth_frame(frame);
 
-        // Proceed on frame
+        // Proceed on frame - hand contour is stored in hand->contour
         Mat dst = extract_background(blurred_frame, pMOG2);
         Mat dst2 = detect_biggest_blob(dst, &hand);
+        detect_finger_move(hand.contour, frame.size(), &screen);
 
         /*vector<Rect> objects;
         CascadeClassifier c = CascadeClassifier("include/palm.xml");
