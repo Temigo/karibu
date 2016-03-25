@@ -20,6 +20,7 @@ struct ScreenSize {
     }
 };
 
+void do_click();
 void do_alt_tab();
 void do_alt_tab_press(bool setOn);
 void do_mousemove(float x, float y, ScreenSize* screen);

@@ -12,6 +12,10 @@
 using namespace std;
 using namespace cv;
 
+// Enable/disable controls
+bool ENABLE_SCROLL = false;
+bool ENABLE_MOUSE = true;
+
 void detect_rapid_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
     // Move mouse according to hand move
     Point max_point = find_higher_point(contour);
@@ -101,8 +105,8 @@ If the value of R is high (compared to Q), it will indicate that the measuring i
     KF.statePre.at<float>(3) = 0;
 
     setIdentity(KF.measurementMatrix);
-    setIdentity(KF.processNoiseCov, Scalar::all(1e-1));
-    setIdentity(KF.measurementNoiseCov, Scalar::all(1000));
+    setIdentity(KF.processNoiseCov, Scalar::all(1e-5));
+    setIdentity(KF.measurementNoiseCov, Scalar::all(1e-3));
     setIdentity(KF.errorCovPost, Scalar::all(1));
 
     // Kalman filter : position and velocity and acceleration
@@ -130,7 +134,7 @@ If the value of R is high (compared to Q), it will indicate that the measuring i
     setIdentity(KF2.measurementNoiseCov, Scalar::all(1e-1));
     setIdentity(KF2.errorCovPost, Scalar::all(1));
 
-    do_alt_tab_press(true);
+    if (ENABLE_SCROLL) do_alt_tab_press(true);
     for (;;) {
         Mat frame;
         cap >> frame;
@@ -143,9 +147,9 @@ If the value of R is high (compared to Q), it will indicate that the measuring i
         // Proceed on frame - hand contour is stored in hand->contour
         Mat dst = extract_background(blurred_frame, pMOG2);
         Mat dst2 = detect_biggest_blob(dst, &hand);
-        //detect_finger_move(dst2, hand.contour, frame.size(), &screen, &KF, measurement);
 
-        detect_rapid_finger_move(dst2, hand.contour, frame.size(), &screen, &KF2, measurement2);
+        if (ENABLE_MOUSE) detect_finger_move(dst2, hand.contour, frame.size(), &screen, &KF, measurement);
+        if (ENABLE_SCROLL) detect_rapid_finger_move(dst2, hand.contour, frame.size(), &screen, &KF2, measurement2);
 
         //imshow("Original", frame);
         //imshow("Blur", blurred_frame);
@@ -153,7 +157,7 @@ If the value of R is high (compared to Q), it will indicate that the measuring i
         imshow("Karibu", dst2);
 
         if (waitKey(30) == 27) { // Esc key to quit
-            do_alt_tab_press(false);
+            if (ENABLE_SCROLL) do_alt_tab_press(false);
             return 0;
         }
 

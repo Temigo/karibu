@@ -7,9 +7,13 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <ctime>
 
 using namespace std;
 
+void do_click() {
+    system("xdotool click 1");
+}
 
 void do_alt_tab() {
     system("xdotool key alt+Tab");
@@ -31,19 +35,19 @@ void do_mousemove(float x, float y, ScreenSize* screen) {
 
     //cout << x_coord << " " << y_coord << endl;
 
-    ostringstream oss;
-    oss << "xdotool mousemove --sync " << x_coord << " " << y_coord;
-
-    string s = oss.str();
-    system(s.c_str());
+    string cmd = "xdotool mousemove --sync " + to_string(x_coord) + " " + to_string(y_coord);
+    system(cmd.c_str());
 }
 
 bool GOING_RIGHT = false;
 bool RETURN_PEAK = false;
 int SPEED_THRESHOLD = 10;
+clock_t inactive_since = -1;
+
 // TODO : works only towards the right
 void do_rapid_mousemove(float x, float y, float vx, float vy, ScreenSize* screen) {
     if (abs(vx) > SPEED_THRESHOLD) {
+        inactive_since = -1;
         RETURN_PEAK = ((GOING_RIGHT && (vx > 0)) || (!GOING_RIGHT && (vx < 0))) && !RETURN_PEAK;
     }
     GOING_RIGHT = (vx < 0);
@@ -65,6 +69,13 @@ void do_rapid_mousemove(float x, float y, float vx, float vy, ScreenSize* screen
     }
 
     if (abs(vx) < SPEED_THRESHOLD) { // Re-init
+        if (inactive_since == -1) {
+            inactive_since = clock();
+        }
+        else {
+            double elapsed_secs = double(clock() - inactive_since) / CLOCKS_PER_SEC;
+            if (elapsed_secs > 2) do_alt_tab_press(false);
+        }
         RETURN_PEAK = false;
         GOING_RIGHT = false;
     }

@@ -1,5 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 set(OpenCV_DIR "/usr/local/share/OpenCV")
 message("OpenCV_DIR : " ${OpenCV_DIR})
@@ -11,9 +12,9 @@ INCLUDE_DIRECTORIES(${X11_INCLUDE_DIR})
 
 if(OpenCV_FOUND)
    message("Found OpenCV")
-   message("Includes: " ${OpenCV_INCLUDE_DIRS})
-   message("Libs : " ${OpenCV_LIBS})
-   message("Version: " ${OpenCV_VERSION})
+   message("\t Includes: " ${OpenCV_INCLUDE_DIRS})
+   message("\t Libs : " ${OpenCV_LIBS})
+   message("\t Version: " ${OpenCV_VERSION})
 endif(OpenCV_FOUND)
 
 if(X11_FOUND)
@@ -24,4 +25,3 @@ PROJECT(karibu)
 
 ADD_EXECUTABLE(karibu main.cpp hand.cpp actions.cpp utils.cpp)
 TARGET_LINK_LIBRARIES(karibu ${OpenCV_LIBS} X11)
-#TARGET_LINK_LIBRARIES(karibu ${X11_INCLUDE_DIR})
