@@ -7,7 +7,6 @@ message("OpenCV_DIR : " ${OpenCV_DIR})
 set(X11_INCLUDE_DIR "/usr/include/X11")
 
 FIND_PACKAGE(OpenCV REQUIRED)
-#FIND_PACKAGE(X11 REQUIRED)
 INCLUDE_DIRECTORIES(${X11_INCLUDE_DIR})
 
 if(OpenCV_FOUND)
@@ -23,6 +22,6 @@ endif(X11_FOUND)
 
 PROJECT(karibu)
 
-ADD_EXECUTABLE(karibu main.cpp hand.cpp actions.cpp)
+ADD_EXECUTABLE(karibu main.cpp hand.cpp actions.cpp utils.cpp)
 TARGET_LINK_LIBRARIES(karibu ${OpenCV_LIBS} X11)
 #TARGET_LINK_LIBRARIES(karibu ${X11_INCLUDE_DIR})

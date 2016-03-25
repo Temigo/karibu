@@ -21,6 +21,6 @@ struct ScreenSize {
 };
 
 void do_alt_tab();
-void do_alt_tab_press();
+void do_alt_tab_press(bool setOn);
 void do_mousemove(float x, float y, ScreenSize* screen);
-void detect_finger_move(float x, float y, ScreenSize* screen);
+void do_rapid_mousemove(float x, float y, float vx, float vy, ScreenSize* screen);

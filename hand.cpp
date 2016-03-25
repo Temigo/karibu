@@ -29,7 +29,7 @@ void Hand::setSum() {
     //cout << history << " " << sum/history << " " << mean << endl;
     if (abs(sum/history - mean) > threshold && history > 15) {
         //cout << "Change " << history << endl;
-        if (ENABLE_ALT_TAB) do_alt_tab();
+        do_alt_tab();
         if (change) {
             cout << "Hand open" << endl;
 
@@ -39,7 +39,6 @@ void Hand::setSum() {
         }
         change = !change;
         reset();
-        //cout << "   " << history << " " << sum/history << " " << mean << endl;
     }
     else {
         if (history < 50) {

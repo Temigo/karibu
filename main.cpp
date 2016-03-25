@@ -6,87 +6,45 @@
 #include <opencv2/video/background_segm.hpp>
 #include <stdexcept>
 #include <vector>
-#include "hand.h"
 #include "actions.h"
+#include "utils.h"
 
 using namespace std;
 using namespace cv;
 
+void detect_rapid_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
+    // Move mouse according to hand move
+    Point max_point = find_higher_point(contour);
 
+    // Kalman Filter
+    Mat prediction = KF->predict();
+    measurement.at<float>(2) = max_point.x - measurement.at<float>(0);
+    measurement.at<float>(3) = max_point.y - measurement.at<float>(1);
+    measurement.at<float>(0) = max_point.x;
+    measurement.at<float>(1) = max_point.y;
 
-Mat detect_biggest_blob(Mat draw, Hand* hand) {
-    vector< vector<Point> > outputs;
-    vector<Vec4i> hierarchy;
-    Mat dst = Mat::zeros(draw.size(), CV_8UC3);
-
-    findContours(draw, outputs, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
-    int largestComp = -1;
-    double maxArea = 200;
-
-    for(unsigned int idx = 0 ; idx < outputs.size() ; idx++) {
-        double area = fabs(contourArea(outputs[idx], false));
-        if( area > maxArea ) {
-            maxArea = area;
-            largestComp = idx;
-        }
-    }
-
-    if (largestComp == -1) return dst;
-
-    Scalar color( 0, 0, 255 );
-
-    if (outputs[largestComp].size() >= 5) {
-        vector<Point> contour = outputs[largestComp];
-        RotatedRect box = fitEllipse(contour);
-
-        if (box.size.width > 10) {
-            vector<Point> hull;
-            vector<int> hullI;
-            convexHull(contour, hull);
-            convexHull(contour, hullI);
-
-            vector< vector<Point> > a;
-            a.push_back(hull);
-            //ellipse(dst, box, Scalar(0,255,0), 1, LINE_AA);
-            drawContours(dst, outputs, largestComp, color, FILLED, LINE_8, hierarchy);
-            //drawContours(dst, outputs, largestComp, color);
-            drawContours(dst, a, 0, color);
-
-            // Find and draw convexity defects
-            if (hull.size() > 3 && contour.size() > 3) {
-                vector<Vec4i> defects;
-                convexityDefects(contour, hullI, defects);
-
-                for (unsigned int i = 0; i < defects.size() ; i++) {
-                    const Vec4i& v = defects[i];
-                    float depth = v[3] / 256;
-                    if (depth > 20) {
-                        circle(dst, contour[v[2]], 10, Scalar(0, 255, 0));
-                    }
-                }
-            }
-
-            // Approx Poly
-            /*vector<Point> approx;
-            approxPolyDP(contour, approx, 30, true);
-            a.push_back(approx);
-            drawContours(dst, a, 1, Scalar(0,255,0));*/
-
-            // Save in hand
-            hand->contour = contour;
-            hand->contourLength = arcLength(contour, true);
-            hand->setSum();
-        }
-    }
-    return dst;
+    Mat estimated = KF->correct(measurement);
+    //cout << "estimate " << estimated.at<float>(0) << " " << estimated.at<float>(1) << endl;
+    //cout << "measure " << measurement.at<float>(0) << " " << measurement.at<float>(1) << endl;
+    //cout << "measure " << measurement.at<float>(2) << " " << measurement.at<float>(3) << endl;
+    //cout << "estimate " << estimated.at<float>(2) << " " << estimated.at<float>(3) << endl;
+    do_rapid_mousemove((float) max_point.x / (float) size.width,
+                (float) max_point.y/(float) size.height,
+                estimated.at<float>(2), estimated.at<float>(3),
+                screen);
+    /*do_rapid_mousemove(max((float) 0., (float) estimated.at<float>(0) / (float) size.width),
+                max((float) 0., (float) estimated.at<float>(1) / (float) size.height),
+                estimated.at<float>(2), estimated.at<float>(3),
+                screen);*/
+    circle(frame, max_point, 10, Scalar(255, 0, 255));
+    circle(frame, Point(measurement.at<float>(0), measurement.at<float>(1)), 10, Scalar(0, 255, 255));
+    circle(frame, Point(estimated.at<float>(0), estimated.at<float>(1)), 10, Scalar(255, 255, 0));
+    //do_mousemove(estimated.at<float>(0), estimated.at<float>(1), screen);
 }
 
 void detect_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
-    Rect box = boundingRect(contour);
     // Move mouse according to hand move
-    Point max_point;
-    max_point.x = box.tl().x + box.width/2;
-    max_point.y = box.tl().y;
+    Point max_point = find_higher_point(contour);
 
     // Kalman Filter
     Mat prediction = KF->predict();
@@ -103,28 +61,6 @@ void detect_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize*
                 screen);
 
     circle(frame, Point(estimated.at<float>(0), estimated.at<float>(1)), 10, Scalar(255, 255, 0));
-    //do_mousemove(estimated.at<float>(0), estimated.at<float>(1), screen);
-}
-
-Mat smooth_frame(Mat frame) {
-    Mat blurred_frame;
-    //blur(frame, frame, Size(25, 25), Point(-1, -1));
-    //GaussianBlur(frame, frame, Size(5, 5), 0, 0);
-    //medianBlur(frame, frame, 5);
-    bilateralFilter(frame, blurred_frame, 5, 5, 5);
-    erode(blurred_frame, blurred_frame, NULL);
-    dilate(blurred_frame, blurred_frame, NULL);
-    return blurred_frame;
-}
-
-Mat extract_background(Mat frame, Ptr<BackgroundSubtractor> pMOG2) {
-    //Mat blurred_frame;
-    //GaussianBlur(frame, blurred_frame, Size(5, 5), 0, 0);
-    //blur(frame, blurred_frame, Size(5, 5), Point(-1, -1));
-
-    Mat fgMaskMOG2;
-    pMOG2->apply(frame, fgMaskMOG2);
-    return fgMaskMOG2;
 }
 
 int main( int argc, const char* argv[] ) {
@@ -140,11 +76,21 @@ int main( int argc, const char* argv[] ) {
     pMOG2 = createBackgroundSubtractorMOG2(500, 16, false);
     Hand hand;
     ScreenSize screen;
+/*
+kalman->process_noise_cov is the 'process noise covariance matrix' and it is often referred in the Kalman literature as Q. The result will be smoother with lower values.
 
-    // Kalman filter
+kalman->measurement_noise_cov is the 'measurement noise covariance matrix' and it is often referred in the Kalman literature as R. The result will be smoother with higher values.
+
+The relation between those two matrices defines the amount and shape of filtering you are performing.
+
+If the value of Q is high, it will mean that the signal you are measuring is varies quickly and you need the filter to be adaptable. If it is small, then big variations will be attributed to noise in the measure.
+
+If the value of R is high (compared to Q), it will indicate that the measuring is noisy so it will be filtered more.
+*/
+    // Kalman filter : position and velocity
     KalmanFilter KF(4, 2, 0);
-    Mat state(4, 2, CV_32F);
-    Mat processNoise(4, 2, CV_32F);
+    //Mat state(4, 2, CV_32F);
+    //Mat processNoise(4, 2, CV_32F);
     Mat_<float> measurement(2, 1);
     measurement.setTo(Scalar(0));
     KF.transitionMatrix = (Mat_<float>(4, 4) << 1,0,1,0,   0,1,0,1,  0,0,1,0,  0,0,0,1);
@@ -155,10 +101,36 @@ int main( int argc, const char* argv[] ) {
     KF.statePre.at<float>(3) = 0;
 
     setIdentity(KF.measurementMatrix);
-    setIdentity(KF.processNoiseCov, Scalar::all(1e-5));
-    setIdentity(KF.measurementNoiseCov, Scalar::all(1e-2));
+    setIdentity(KF.processNoiseCov, Scalar::all(1e-1));
+    setIdentity(KF.measurementNoiseCov, Scalar::all(1000));
     setIdentity(KF.errorCovPost, Scalar::all(1));
 
+    // Kalman filter : position and velocity and acceleration
+    KalmanFilter KF2(6, 4, 0);
+    //Mat state(6, 4, CV_32F);
+    //Mat processNoise(6, 4, CV_32F);
+    Mat_<float> measurement2(4, 1);
+    measurement2.setTo(Scalar(0));
+    /* Motion equations
+    x_k = x_{k-1} + dT * vx_{k-1} + 0.5 * dT * dT * ax_{k-1}
+    vx_k = vx_{k-1} + dT * ax_{k-1}
+    */
+    float dT = 1e-1; // TODO Time step : use cv::getTickFrequency
+    KF2.transitionMatrix = (Mat_<float>(6, 6) << 1,0,dT,0,0.5*dT*dT,0,   0,1,0,dT,0,0.5*dT*dT,  0,0,1,0,dT,0,  0,0,0,1,0,dT, 0,0,0,0,1,0, 0,0,0,0,0,1);
+
+    KF2.statePre.at<float>(0) = 0; // First x
+    KF2.statePre.at<float>(1) = 0; // First y
+    KF2.statePre.at<float>(2) = 0;
+    KF2.statePre.at<float>(3) = 0;
+    KF2.statePre.at<float>(4) = 0;
+    KF2.statePre.at<float>(5) = 0;
+
+    setIdentity(KF2.measurementMatrix);
+    setIdentity(KF2.processNoiseCov, Scalar::all(1e-1));
+    setIdentity(KF2.measurementNoiseCov, Scalar::all(1e-1));
+    setIdentity(KF2.errorCovPost, Scalar::all(1));
+
+    do_alt_tab_press(true);
     for (;;) {
         Mat frame;
         cap >> frame;
@@ -171,22 +143,19 @@ int main( int argc, const char* argv[] ) {
         // Proceed on frame - hand contour is stored in hand->contour
         Mat dst = extract_background(blurred_frame, pMOG2);
         Mat dst2 = detect_biggest_blob(dst, &hand);
-        detect_finger_move(dst2, hand.contour, frame.size(), &screen, &KF, measurement);
+        //detect_finger_move(dst2, hand.contour, frame.size(), &screen, &KF, measurement);
 
-        /*vector<Rect> objects;
-        CascadeClassifier c = CascadeClassifier("include/palm.xml");
-        c.detectMultiScale(frame, objects);
-
-        for (int i = 0; i < objects.size(); i++) {
-            rectangle(frame, objects[i], Scalar(0));
-        }*/
+        detect_rapid_finger_move(dst2, hand.contour, frame.size(), &screen, &KF2, measurement2);
 
         //imshow("Original", frame);
         //imshow("Blur", blurred_frame);
         //moveWindow("Blur", 700, 0);
         imshow("Karibu", dst2);
 
-        waitKey(30);
+        if (waitKey(30) == 27) { // Esc key to quit
+            do_alt_tab_press(false);
+            return 0;
+        }
 
     }
 
