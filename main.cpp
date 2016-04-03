@@ -14,7 +14,7 @@ using namespace cv;
 
 // Enable/disable controls
 bool ENABLE_SCROLL = false;
-bool ENABLE_MOUSE = true;
+bool ENABLE_MOUSE = false;
 
 void detect_rapid_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
     // Move mouse according to hand move
@@ -155,12 +155,25 @@ If the value of R is high (compared to Q), it will indicate that the measuring i
         //imshow("Blur", blurred_frame);
         //moveWindow("Blur", 700, 0);
         imshow("Karibu", dst2);
-
-        if (waitKey(30) == 27) { // Esc key to quit
-            if (ENABLE_SCROLL) do_alt_tab_press(false);
-            return 0;
+        switch(waitKey(30)) {
+            case 27: // Esc key to quit
+                if (ENABLE_SCROLL) do_alt_tab_press(false);
+                cout << "Exiting..." << endl;
+                return 0;
+                break;
+            case 9: // tabulation key
+                ENABLE_ALT_TAB = !ENABLE_ALT_TAB;
+                cout << "   ENABLE_ALT_TAB = " << ENABLE_ALT_TAB << endl;
+                break;
+            case 32: // Space key
+                ENABLE_SCROLL = !ENABLE_SCROLL;
+                if (ENABLE_SCROLL) do_alt_tab_press(true);
+                cout << "   ENABLE_SCROLL = " << ENABLE_SCROLL << endl;
+                break;
+            case 13: // Enter key
+                ENABLE_MOUSE = !ENABLE_MOUSE;
+                cout << "   ENABLE_MOUSE = " << ENABLE_MOUSE << endl;
         }
-
     }
 
     waitKey(0);

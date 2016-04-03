@@ -42,6 +42,7 @@ void do_mousemove(float x, float y, ScreenSize* screen) {
 bool GOING_RIGHT = false;
 bool RETURN_PEAK = false;
 int SPEED_THRESHOLD = 10;
+int MAX_SECONDS = 3; // Max duration after which we click
 clock_t inactive_since = -1;
 
 // TODO : works only towards the right
@@ -74,7 +75,7 @@ void do_rapid_mousemove(float x, float y, float vx, float vy, ScreenSize* screen
         }
         else {
             double elapsed_secs = double(clock() - inactive_since) / CLOCKS_PER_SEC;
-            if (elapsed_secs > 2) do_alt_tab_press(false);
+            if (elapsed_secs > MAX_SECONDS) do_alt_tab_press(false);
         }
         RETURN_PEAK = false;
         GOING_RIGHT = false;
