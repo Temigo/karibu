@@ -29,14 +29,19 @@ void do_alt_tab_press(bool setOn) {
     }
 }
 
+int old_x_coord = -1;
+int old_y_coord = -1;
+float MAX_MOVEMENT = 1000. ;
 void do_mousemove(float x, float y, ScreenSize* screen) {
     int x_coord = int((1-x) * screen->width);
     int y_coord = int(y * screen->height);
 
-    //cout << x_coord << " " << y_coord << endl;
-
-    string cmd = "xdotool mousemove --sync " + to_string(x_coord) + " " + to_string(y_coord);
-    system(cmd.c_str());
+    if (old_x_coord > 0 && sqrt(pow(x_coord - old_x_coord, 2) +  pow(y_coord - old_y_coord, 2)) < MAX_MOVEMENT) {
+        string cmd = "xdotool mousemove --sync " + to_string(x_coord) + " " + to_string(y_coord);
+        system(cmd.c_str());
+    }
+    old_x_coord = x_coord;
+    old_y_coord = y_coord;
 }
 
 bool GOING_RIGHT = false;
@@ -56,7 +61,7 @@ void do_rapid_mousemove(float x, float y, float vx, float vy, ScreenSize* screen
     if (vx < -SPEED_THRESHOLD) {
         //cout << "[Right] ";
         if (RETURN_PEAK) {
-            cout << "Peak right ";
+            //cout << "Peak right ";
             system("xdotool key Right");
         }
     }
@@ -64,7 +69,7 @@ void do_rapid_mousemove(float x, float y, float vx, float vy, ScreenSize* screen
     if (vx > SPEED_THRESHOLD) {
         //cout << "[Left] ";
         if (RETURN_PEAK) {
-            cout << "Peak left ";
+            //cout << "Peak left ";
             system("xdotool key Left");
         }
     }
@@ -81,7 +86,7 @@ void do_rapid_mousemove(float x, float y, float vx, float vy, ScreenSize* screen
         GOING_RIGHT = false;
     }
 
-    if (RETURN_PEAK && (abs(vx) > SPEED_THRESHOLD)) {
+    /*if (RETURN_PEAK && (abs(vx) > SPEED_THRESHOLD)) {
         cout << GOING_RIGHT << " " << RETURN_PEAK << " " << vx << " " << vy << endl;
-    }
+    }*/
 }
