@@ -3,10 +3,13 @@
 Hand-gesture detection for human-computer interaction
 
 ## Lib
-Uses OpenCV 3 and xdotool.
+* Currently works only on Unix systems
+* Uses OpenCV 3 and xdotool.
 
 ## Guide
 Different keys trigger (enable/disable) different behaviors :
-| Tab     | Space     |  Enter  |
-| :------------- | :------------- | :------------- |
+
+
+| Tab key            | Space key         |  Enter key         |
+| ------------- | ------------- | ------------- |
 | Alt-Tab behavior attached to open/closed hand | Move mouse with the finger |Scroll with the finger in window switch|
