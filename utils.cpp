@@ -1,3 +1,6 @@
+/*
+Utils functions : detections, background subtraction, smoothing
+*/
 #include <stdio.h>
 #include <iostream>
 #include <list>
@@ -6,11 +9,48 @@
 #include <opencv2/video/background_segm.hpp>
 #include <stdexcept>
 #include <vector>
-#include "actions.h"
 #include "utils.h"
 
 using namespace std;
 using namespace cv;
+
+void detect_rapid_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
+    // Move mouse according to hand move
+    Point max_point = find_higher_point(contour);
+
+    // Kalman Filter
+    Mat prediction = KF->predict();
+    measurement.at<float>(2) = max_point.x - measurement.at<float>(0);
+    measurement.at<float>(3) = max_point.y - measurement.at<float>(1);
+    measurement.at<float>(0) = max_point.x;
+    measurement.at<float>(1) = max_point.y;
+
+    Mat estimated = KF->correct(measurement);
+    do_rapid_mousemove((float) max_point.x / (float) size.width,
+                (float) max_point.y/(float) size.height,
+                estimated.at<float>(2), estimated.at<float>(3),
+                screen);
+    circle(frame, max_point, 10, Scalar(255, 0, 255));
+    circle(frame, Point(measurement.at<float>(0), measurement.at<float>(1)), 10, Scalar(0, 255, 255));
+    circle(frame, Point(estimated.at<float>(0), estimated.at<float>(1)), 10, Scalar(255, 255, 0));
+    //do_mousemove(estimated.at<float>(0), estimated.at<float>(1), screen);
+}
+
+void detect_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
+    // Move mouse according to hand move
+    Point max_point = find_higher_point(contour);
+
+    // Kalman Filter
+    Mat prediction = KF->predict();
+    measurement.at<float>(0) = max_point.x;
+    measurement.at<float>(1) = max_point.y;
+    Mat estimated = KF->correct(measurement);
+    do_mousemove(max((float) 0., (float) estimated.at<float>(0) / (float) size.width),
+                max((float) 0., (float) estimated.at<float>(1) / (float) size.height),
+                screen);
+
+    circle(frame, Point(estimated.at<float>(0), estimated.at<float>(1)), 10, Scalar(255, 255, 0));
+}
 
 Mat detect_biggest_blob(Mat draw, Hand* hand) {
     vector< vector<Point> > outputs;
@@ -64,12 +104,6 @@ Mat detect_biggest_blob(Mat draw, Hand* hand) {
                 }
             }
 
-            // Approx Poly
-            /*vector<Point> approx;
-            approxPolyDP(contour, approx, 30, true);
-            a.push_back(approx);
-            drawContours(dst, a, 1, Scalar(0,255,0));*/
-
             // Save in hand
             hand->contour = contour;
             hand->contourLength = arcLength(contour, true);
@@ -97,16 +131,12 @@ Mat smooth_frame(Mat frame) {
     //GaussianBlur(frame, frame, Size(5, 5), 0, 0);
     //medianBlur(frame, frame, 5);
     bilateralFilter(frame, blurred_frame, 5, 5, 5);
-    erode(blurred_frame, blurred_frame, NULL);
-    dilate(blurred_frame, blurred_frame, NULL);
+    erode(blurred_frame, blurred_frame, Mat());
+    dilate(blurred_frame, blurred_frame, Mat());
     return blurred_frame;
 }
 
 Mat extract_background(Mat frame, Ptr<BackgroundSubtractor> pMOG2) {
-    //Mat blurred_frame;
-    //GaussianBlur(frame, blurred_frame, Size(5, 5), 0, 0);
-    //blur(frame, blurred_frame, Size(5, 5), Point(-1, -1));
-
     Mat fgMaskMOG2;
     pMOG2->apply(frame, fgMaskMOG2);
     return fgMaskMOG2;

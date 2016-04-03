@@ -1,3 +1,6 @@
+/*
+Hand : biggest contour and its properties
+*/
 #include <stdio.h>
 #include <iostream>
 #include <list>
@@ -9,7 +12,6 @@
 #include "hand.h"
 #include "actions.h"
 
-// OpenCV 2.4.9
 using namespace std;
 using namespace cv;
 

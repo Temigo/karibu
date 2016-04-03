@@ -1,13 +1,19 @@
+/*
+Bindings to graphic actions (X11) with xdotools
+*/
 #include <stdlib.h>
-#include <cmath> // For abs
+
 // Using Linux
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include "actions.h"
+
 #include <string>
 #include <sstream>
 #include <iostream>
 #include <ctime>
+#include <cmath> // For abs
+
+#include "actions.h"
 
 using namespace std;
 

@@ -7,10 +7,13 @@
 #include <stdexcept>
 #include <vector>
 #include "hand.h"
+#include "actions.h"
 
 using namespace std;
 using namespace cv;
 
+void detect_rapid_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement);
+void detect_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement);
 Mat detect_biggest_blob(Mat draw, Hand* hand);
 Point find_higher_point(vector<Point> contour);
 Mat smooth_frame(Mat frame);

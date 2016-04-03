@@ -1,3 +1,14 @@
+/* main.cpp
+Fonctions principales
+=====================
+
+Interaction avec le programme :
+- Esc : quitter
+- Tab : Alt+TAB avec main ouverte/fermée
+- Espace : scroll dans le switch fenêtres
+- Enter : bouger la souris
+*/
+
 #include <stdio.h>
 #include <iostream>
 #include <list>
@@ -6,7 +17,6 @@
 #include <opencv2/video/background_segm.hpp>
 #include <stdexcept>
 #include <vector>
-#include "actions.h"
 #include "utils.h"
 
 using namespace std;
@@ -15,57 +25,6 @@ using namespace cv;
 // Enable/disable controls
 bool ENABLE_SCROLL = false;
 bool ENABLE_MOUSE = false;
-
-void detect_rapid_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
-    // Move mouse according to hand move
-    Point max_point = find_higher_point(contour);
-
-    // Kalman Filter
-    Mat prediction = KF->predict();
-    measurement.at<float>(2) = max_point.x - measurement.at<float>(0);
-    measurement.at<float>(3) = max_point.y - measurement.at<float>(1);
-    measurement.at<float>(0) = max_point.x;
-    measurement.at<float>(1) = max_point.y;
-
-    Mat estimated = KF->correct(measurement);
-    //cout << "estimate " << estimated.at<float>(0) << " " << estimated.at<float>(1) << endl;
-    //cout << "measure " << measurement.at<float>(0) << " " << measurement.at<float>(1) << endl;
-    //cout << "measure " << measurement.at<float>(2) << " " << measurement.at<float>(3) << endl;
-    //cout << "estimate " << estimated.at<float>(2) << " " << estimated.at<float>(3) << endl;
-    do_rapid_mousemove((float) max_point.x / (float) size.width,
-                (float) max_point.y/(float) size.height,
-                estimated.at<float>(2), estimated.at<float>(3),
-                screen);
-    /*do_rapid_mousemove(max((float) 0., (float) estimated.at<float>(0) / (float) size.width),
-                max((float) 0., (float) estimated.at<float>(1) / (float) size.height),
-                estimated.at<float>(2), estimated.at<float>(3),
-                screen);*/
-    circle(frame, max_point, 10, Scalar(255, 0, 255));
-    circle(frame, Point(measurement.at<float>(0), measurement.at<float>(1)), 10, Scalar(0, 255, 255));
-    circle(frame, Point(estimated.at<float>(0), estimated.at<float>(1)), 10, Scalar(255, 255, 0));
-    //do_mousemove(estimated.at<float>(0), estimated.at<float>(1), screen);
-}
-
-void detect_finger_move(Mat frame, vector<Point> contour, Size size, ScreenSize* screen, KalmanFilter* KF, Mat measurement) {
-    // Move mouse according to hand move
-    Point max_point = find_higher_point(contour);
-
-    // Kalman Filter
-    Mat prediction = KF->predict();
-    measurement.at<float>(0) = max_point.x;
-    measurement.at<float>(1) = max_point.y;
-    Mat estimated = KF->correct(measurement);
-    //cout << "estimate " << estimated.at<float>(0) << " " << estimated.at<float>(1) << endl;
-    //cout << "measure " << measurement.at<float>(0) << " " << measurement.at<float>(1) << endl;
-    /*do_mousemove((float) max_point.x / (float) size.width,
-                (float) max_point.y/(float) size.height,
-                screen);*/
-    do_mousemove(max((float) 0., (float) estimated.at<float>(0) / (float) size.width),
-                max((float) 0., (float) estimated.at<float>(1) / (float) size.height),
-                screen);
-
-    circle(frame, Point(estimated.at<float>(0), estimated.at<float>(1)), 10, Scalar(255, 255, 0));
-}
 
 int main( int argc, const char* argv[] ) {
     VideoCapture cap(0);
@@ -153,7 +112,7 @@ If the value of R is high (compared to Q), it will indicate that the measuring i
 
         //imshow("Original", frame);
         //imshow("Blur", blurred_frame);
-        //moveWindow("Blur", 700, 0);
+        //moveWindow("Original", 700, 0);
         imshow("Karibu", dst2);
         switch(waitKey(30)) {
             case 27: // Esc key to quit
