@@ -36,7 +36,7 @@ int main( int argc, const char* argv[] ) {
 
     // Setup
     Ptr<BackgroundSubtractor> pMOG2;
-    pMOG2 = createBackgroundSubtractorMOG2(300, 16, false);
+    pMOG2 = createBackgroundSubtractorMOG2(500, 16, false);
     Hand hand;
     ScreenSize screen;
 /*
